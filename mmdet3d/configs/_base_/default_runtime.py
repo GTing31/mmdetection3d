@@ -8,6 +8,8 @@ from mmengine.runner.log_processor import LogProcessor
 
 from mmdet3d.engine.hooks.visualization_hook import Det3DVisualizationHook
 
+from mmengine.visualization import TensorboardVisBackend
+
 default_scope = 'mmdet3d'
 
 default_hooks = dict(
@@ -16,7 +18,8 @@ default_hooks = dict(
     param_scheduler=dict(type=ParamSchedulerHook),
     checkpoint=dict(type=CheckpointHook, interval=-1),
     sampler_seed=dict(type=DistSamplerSeedHook),
-    visualization=dict(type=Det3DVisualizationHook))
+    visualization=dict(type=Det3DVisualizationHook),
+    vis_backends=dict(type=TensorboardVisBackend))
 
 env_cfg = dict(
     cudnn_benchmark=False,

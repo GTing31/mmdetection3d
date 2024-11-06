@@ -8,7 +8,7 @@ from mmengine.config import Config, DictAction
 from mmengine.logging import print_log
 from mmengine.registry import RUNNERS
 from mmengine.runner import Runner
-
+from mmdet3d.registry import MODELS
 from mmdet3d.utils import replace_ceph_backend
 
 
@@ -136,9 +136,11 @@ def main():
         # build customized runner from the registry
         # if 'runner_type' is set in the cfg
         runner = RUNNERS.build(cfg)
-
+    print(runner.model)#print model
+    # print(MODELS.module_dict)
     # start training
     runner.train()
+
 
 
 if __name__ == '__main__':

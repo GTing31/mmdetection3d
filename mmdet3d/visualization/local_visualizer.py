@@ -974,6 +974,8 @@ class Det3DLocalVisualizer(DetLocalVisualizer):
             show_pcd_rgb (bool): Whether to show RGB point cloud. Defaults to
                 False.
         """
+
+
         assert vis_task in (
             'mono_det', 'multi-view_det', 'lidar_det', 'lidar_seg',
             'multi-modality_det'), f'got unexpected vis_task {vis_task}.'

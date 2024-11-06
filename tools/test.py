@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 import os
+os.environ['DISPLAY'] = '1'##會判斷環境變數，這可以繞過
 import os.path as osp
 
 from mmengine.config import Config, ConfigDict, DictAction

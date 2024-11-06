@@ -1,10 +1,10 @@
 _base_ = [
-    '../_base_/models/pointpillars_hv_secfpn_kitti.py',
+    '../_base_/models/pointpillarsN_hv_secfpn_kitti.py',
     '../_base_/datasets/kitti-3d-3class.py',
     '../_base_/schedules/cyclic-40e.py', '../_base_/default_runtime.py'
 ]
 
-point_cloud_range = [0, -39.68, -3, 69.12, 39.68, 1]
+point_cloud_range = [0, -39.68, -3, 69.12, 39.68, 1]# xmin, ymin, zmin, xmax, ymax, zmax
 # dataset settings
 data_root = 'data/kitti/'
 class_names = ['Pedestrian', 'Cyclist', 'Car']
@@ -17,10 +17,10 @@ db_sampler = dict(
     info_path=data_root + 'kitti_dbinfos_train.pkl',
     rate=1.0,
     prepare=dict(
-        filter_by_difficulty=[-1],
-        filter_by_min_points=dict(Car=5, Pedestrian=5, Cyclist=5)),
+        filter_by_difficulty=[-1],# 通過難度來過濾數據，-1 表示不過濾任何數據
+        filter_by_min_points=dict(Car=5, Pedestrian=5, Cyclist=5)),# 通過最小點數來過濾數據
     classes=class_names,
-    sample_groups=dict(Car=15, Pedestrian=15, Cyclist=15),
+    sample_groups=dict(Car=15, Pedestrian=15, Cyclist=15),# 每個類別的樣本數
     points_loader=dict(
         type='LoadPointsFromFile',
         coord_type='LIDAR',
@@ -32,20 +32,20 @@ db_sampler = dict(
 # PointPillars uses different augmentation hyper parameters
 train_pipeline = [
     dict(
-        type='LoadPointsFromFile',
+        type='LoadPointsFromFile',# 從文件中加載點雲
         coord_type='LIDAR',
         load_dim=4,
         use_dim=4,
         backend_args=backend_args),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
     dict(type='ObjectSample', db_sampler=db_sampler, use_ground_plane=False),
-    dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
+    dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),# 隨機水平翻轉 0.5
     dict(
         type='GlobalRotScaleTrans',
         rot_range=[-0.78539816, 0.78539816],
         scale_ratio_range=[0.95, 1.05]),
     dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
-    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
+    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),# 過濾點雲範圍
     dict(type='PointShuffle'),
     dict(
         type='Pack3DDetInputs',
@@ -118,7 +118,7 @@ param_scheduler = [
         begin=epoch_num * 0.4,
         end=epoch_num * 1,
         convert_to_iter_based=True)
-]
+]# 這裡的設置是將學習率和動量進行了調整
 # max_norm=35 is slightly better than 10 for PointPillars in the earlier
 # development of the codebase thus we keep the setting. But we does not
 # specifically tune this parameter.

@@ -6,6 +6,11 @@ from torch import Tensor, nn
 
 from mmdet3d.registry import MODELS
 
+from mmdet3d.models.layers.spconv import IS_SPCONV2_AVAILABLE
+if IS_SPCONV2_AVAILABLE:
+    from spconv.pytorch import SparseConvTensor, SparseModule, SparseSequential
+else:
+    from mmcv.ops import SparseConvTensor, SparseModule, SparseSequential
 
 @MODELS.register_module()
 class PointPillarsScatter(nn.Module):
@@ -46,18 +51,26 @@ class PointPillarsScatter(nn.Module):
                 The first column indicates the sample ID.
         """
         # Create the canvas for this sample
+        #生成一个全0的Tensor(畫布)
         canvas = torch.zeros(
             self.in_channels,
             self.nx * self.ny,
             dtype=voxel_features.dtype,
             device=voxel_features.device)
 
+        # print(f"Poin{coors[:, [0, 2, 3]]}")
         indices = coors[:, 2] * self.nx + coors[:, 3]
         indices = indices.long()
         voxels = voxel_features.t()
         # Now scatter the blob back to the canvas.
+
+        # print(f"PointPillarsScatterFeature type: {voxel_features.dtype}, Shape: {voxel_features.shape}")
+        # print(f"PointPillarsScatterCoors type: {coors.dtype}, Shape: {coors.shape}")
+
         canvas[:, indices] = voxels
         # Undo the column stacking to final 4-dim tensor
+
+
         canvas = canvas.view(1, self.in_channels, self.ny, self.nx)
         return canvas
 
@@ -73,6 +86,7 @@ class PointPillarsScatter(nn.Module):
         """
         # batch_canvas will be the final output.
         batch_canvas = []
+        print(f"Poin{coors[:, [0, 2, 3]]}")
         for batch_itt in range(batch_size):
             # Create the canvas for this sample
             canvas = torch.zeros(
@@ -94,6 +108,9 @@ class PointPillarsScatter(nn.Module):
 
             # Append to a list for later stacking.
             batch_canvas.append(canvas)
+
+        # print(f"PointPillarsScatterFeature type: {voxel_features.dtype}, Shape: {voxel_features.shape}")
+        # print(f"PointPillarsScatterCoors type: {coors.dtype}, Shape: {coors.shape}")
 
         # Stack to 3-dim tensor (batch-size, in_channels, nrows*ncols)
         batch_canvas = torch.stack(batch_canvas, 0)

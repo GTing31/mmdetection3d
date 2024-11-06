@@ -41,7 +41,7 @@ class VoxelNet(SingleStage3DDetector):
                                             voxel_dict['coors'])
         batch_size = voxel_dict['coors'][-1, 0].item() + 1
         x = self.middle_encoder(voxel_features, voxel_dict['coors'],
-                                batch_size)
+                                 batch_size)
         x = self.backbone(x)
         if self.with_neck:
             x = self.neck(x)

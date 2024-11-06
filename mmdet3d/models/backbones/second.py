@@ -39,6 +39,7 @@ class SECOND(BaseModule):
         assert len(out_channels) == len(layer_nums)
 
         in_filters = [in_channels, *out_channels[:-1]]
+        print(in_filters)
         # note that when stride > 1, conv2d with same padding isn't
         # equal to pad-conv2d. we should use pad-conv2d.
         blocks = []
