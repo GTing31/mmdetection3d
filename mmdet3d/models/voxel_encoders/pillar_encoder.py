@@ -68,6 +68,9 @@ class PillarFeatureNet(nn.Module):
         self._with_distance = with_distance
         self._with_cluster_center = with_cluster_center
         self._with_voxel_center = with_voxel_center
+
+
+
         # Create PillarFeatureNet layers
         self.in_channels = in_channels
         feat_channels = [in_channels] + list(feat_channels)

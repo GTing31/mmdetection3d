@@ -141,7 +141,7 @@ class PFNLayer(nn.Module):
         self.norm = build_norm_layer(norm_cfg, self.units)[1]
         self.linear = nn.Linear(in_channels, self.units, bias=False)
 
-        assert mode in ['max', 'avg']
+        assert mode in ['max', 'avg', 'maxavg']
         self.mode = mode
 
     def forward(self,
@@ -177,6 +177,12 @@ class PFNLayer(nn.Module):
             x_max = x.sum(
                 dim=1, keepdim=True) / num_voxels.type_as(inputs).view(
                     -1, 1, 1)
+        elif self.mode == 'maxavg':
+            if aligned_distance is not None:
+                x = x.mul(aligned_distance.unsqueeze(-1))
+            x_max = torch.max(x, dim=1, keepdim=True)[0]
+            x_avg = x.sum(dim=1, keepdim=True) / num_voxels.type_as(inputs).view(-1, 1, 1)
+            x_max = (x_max + x_avg) / 2.
 
         if self.last_vfe:
             return x_max
