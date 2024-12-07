@@ -20,7 +20,7 @@ def parse_args():
         '--shape',
         type=int,
         nargs='+',
-        default=[40000, 4],
+        default=[16000, 32, 4],
         help='input point cloud size')
     parser.add_argument(
         '--modality',
@@ -45,20 +45,10 @@ def parse_args():
 def main():
     args = parse_args()
 
-    if args.modality == 'point':
-        assert len(args.shape) == 2, 'invalid input shape'
-        input_shape = tuple(args.shape)
-    elif args.modality == 'image':
-        if len(args.shape) == 1:
-            input_shape = (3, args.shape[0], args.shape[0])
-        elif len(args.shape) == 2:
-            input_shape = (3, ) + tuple(args.shape)
-        else:
-            raise ValueError('invalid input shape')
-    elif args.modality == 'multi':
-        raise NotImplementedError(
-            'FLOPs counter is currently not supported for models with '
-            'multi-modality input')
+
+    input_shape = tuple(args.shape)
+
+
 
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:

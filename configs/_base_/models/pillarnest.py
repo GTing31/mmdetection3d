@@ -20,18 +20,35 @@ model = dict(
         mode='maxavg'),
     middle_encoder=dict(
         type='PointPillarsScatter', in_channels=48, output_shape=[496, 432]),
+    # backbone=dict(
+    #     type="ConvNeXtPC",
+    #     arch="tiny",
+    #     in_channels=48,
+    #     drop_path_rate=0.4,
+    #     layer_scale_init_value=1.0,
+    #     gap_before_final_norm=False,
+    # ),
     backbone=dict(
-        type='SECOND',
-        in_channels=64,
-        layer_nums=[3, 5, 5],
-        layer_strides=[2, 2, 2],
-        out_channels=[64, 128, 256]),
+        type="InceptionNext",
+        in_channels=48,
+        depth=(2, 2, 1, 1, 1),
+        channels=(48, 96, 96, 96, 96),
+        drop_path_rate=0.4,
+        layer_scale_init_value=1.0,
+        gap_before_final_norm=False,
+    ),
+
+    # neck=dict(
+    #     type='ASPPNeck',
+    #     in_channels=96),
+
     neck=dict(
         type='SECONDFPN',
         in_channels=[96, 96, 96],
         upsample_strides=[1, 2, 4],
         out_channels=[96, 96, 96],
-        use_conv_for_no_stride=True,),
+        use_conv_for_no_stride=True, ),
+
     bbox_head=dict(
         type='Anchor3DHead',
         num_classes=3,

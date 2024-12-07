@@ -5,8 +5,9 @@ from .dla_neck import DLANeck
 from .imvoxel_neck import IndoorImVoxelNeck, OutdoorImVoxelNeck
 from .pointnet2_fp_neck import PointNetFPNeck
 from .second_fpn import SECONDFPN , SECONDFPNv1
+from .aspp import ASPPNeck
 
 __all__ = [
     'FPN', 'SECONDFPN', 'OutdoorImVoxelNeck', 'PointNetFPNeck', 'DLANeck',
-    'IndoorImVoxelNeck', 'SECONDFPNv1'
+    'IndoorImVoxelNeck', 'SECONDFPNv1', 'ASPPNeck'
 ]

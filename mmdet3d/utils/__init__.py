@@ -7,11 +7,11 @@ from .setup_env import register_all_modules, setup_multi_processes
 from .typing_utils import (ConfigType, InstanceList, MultiConfig,
                            OptConfigType, OptInstanceList, OptMultiConfig,
                            OptSampleList, OptSamplingResultList)
-
+from  .conv import Conv, ConvBlock, BasicBlock
 __all__ = [
     'collect_env', 'setup_multi_processes', 'compat_cfg',
     'register_all_modules', 'array_converter', 'ArrayConverter', 'ConfigType',
     'OptConfigType', 'MultiConfig', 'OptMultiConfig', 'InstanceList',
     'OptInstanceList', 'OptSamplingResultList', 'replace_ceph_backend',
-    'OptSampleList'
+    'OptSampleList', 'Conv', 'ConvBlock', 'BasicBlock'
 ]

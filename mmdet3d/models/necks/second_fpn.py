@@ -4,7 +4,7 @@ import torch
 from mmcv.cnn import build_conv_layer, build_norm_layer, build_upsample_layer
 from mmengine.model import BaseModule
 from torch import nn as nn
-
+import time
 from mmdet3d.registry import MODELS
 
 
@@ -84,6 +84,7 @@ class SECONDFPN(BaseModule):
         Returns:
             list[torch.Tensor]: Multi-level feature maps.
         """
+        start_time = time.time()
         assert len(x) == len(self.in_channels)
         ups = [deblock(x[i]) for i, deblock in enumerate(self.deblocks)]
 
@@ -91,6 +92,10 @@ class SECONDFPN(BaseModule):
             out = torch.cat(ups, dim=1)
         else:
             out = ups[0]
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        # print(f"Neck 花費：{elapsed_time:.6f} 秒")
         return [out]
 
 @MODELS.register_module()

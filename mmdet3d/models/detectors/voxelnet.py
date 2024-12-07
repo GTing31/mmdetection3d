@@ -35,7 +35,10 @@ class VoxelNet(SingleStage3DDetector):
 
     def extract_feat(self, batch_inputs_dict: dict) -> Tuple[Tensor]:
         """Extract features from points."""
+        # print("Type of batch_inputs_dict:", type(batch_inputs_dict))
+
         voxel_dict = batch_inputs_dict['voxels']
+        # print("voxel_dict:", voxel_dict)
         voxel_features = self.voxel_encoder(voxel_dict['voxels'],
                                             voxel_dict['num_points'],
                                             voxel_dict['coors'])

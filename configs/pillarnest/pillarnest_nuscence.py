@@ -1,7 +1,7 @@
 _base_ = [
     '../_base_/datasets/nus-3d.py',
-    '../_base_/models/centerpoint_02pillar_second_secfpn_nus.py',
-    '../_base_/schedules/cyclic_20e.py', '../_base_/default_runtime.py'
+    '../_base_/models/centerpoint_pillar02_second_secfpn_nus.py',
+    '../_base_/schedules/cyclic-20e.py', '../_base_/default_runtime.py'
 ]
 voxel_size = [0.15, 0.15, 8]
 
@@ -13,9 +13,10 @@ class_names = [
     'car', 'truck', 'construction_vehicle', 'bus', 'trailer', 'barrier',
     'motorcycle', 'bicycle', 'pedestrian', 'traffic_cone'
 ]
-
+data_prefix = dict(pts='samples/LIDAR_TOP', img='', sweeps='sweeps/LIDAR_TOP')
 model = dict(
-    pts_voxel_layer=dict(voxel_size=voxel_size, point_cloud_range=point_cloud_range),
+    data_preprocessor=dict(
+        voxel_layer=dict(point_cloud_range=point_cloud_range)),
     pts_voxel_encoder=dict(
         type='PillarFeatureNet',
         feat_channels=[48],
@@ -28,19 +29,15 @@ model = dict(
 
     pts_backbone=dict(
         _delete_=True,
-        type="ConvNeXt_PC",
+        type="ConvNeXtPC",
         arch="small",
         in_channels=48,
         out_indices=[2, 3, 4],
         drop_path_rate=0.4,
         layer_scale_init_value=1.0,
         gap_before_final_norm=False,
-        init_cfg=dict(
-            type="Pretrained",
-            checkpoint="/data/pretrain_weight/convnext_tiny_mmcls.pth",
-            prefix="backbone.",
-        ),
     ),
+
     pts_neck=dict(
         type='SECONDFPN',
         in_channels=[192, 192, 192],
@@ -51,16 +48,34 @@ model = dict(
         use_conv_for_no_stride=True),
 
     pts_bbox_head=dict(
-        type='CenterPlusHead',
+        type='CenterHead',
         in_channels=sum([128, 128, 128]),
+        tasks=[
+            dict(num_class=1, class_names=['car']),
+            dict(num_class=2, class_names=['truck', 'construction_vehicle']),
+            dict(num_class=2, class_names=['bus', 'trailer']),
+            dict(num_class=1, class_names=['barrier']),
+            dict(num_class=2, class_names=['motorcycle', 'bicycle']),
+            dict(num_class=2, class_names=['pedestrian', 'traffic_cone']),
+        ],
+        common_heads=dict(
+            reg=(2, 2), height=(1, 2), dim=(3, 2), rot=(2, 2), vel=(2, 2)),
+        share_conv_channel=64,
         bbox_coder=dict(
+            type='CenterPointBBoxCoder',
+            post_center_range=[-61.2, -61.2, -10.0, 61.2, 61.2, 10.0],
+            max_num=500,
+            score_threshold=0.1,
+            out_size_factor=4,
             voxel_size=voxel_size[:2],
             pc_range=point_cloud_range[:2],
-            out_size_factor=4,),
-        common_heads=dict(reg=(2, 2), height=(1, 2), dim=(3, 2), rot=(2, 2), vel=(2, 2),  iou=(1, 2)),
-        iou_score=dict(type='BboxOverlaps3D', coordinate='lidar'),
-        loss_iou_score=dict(type='L1Loss', reduction='mean', loss_weight=1.),
-        iou_score_weight=1.0),
+            code_size=9),
+        separate_head=dict(
+            type='SeparateHead', init_bias=-2.19, final_kernel=3),
+        loss_cls=dict(type='mmdet.GaussianFocalLoss', reduction='mean'),
+        loss_bbox=dict(
+            type='mmdet.L1Loss', reduction='mean', loss_weight=0.25),
+        norm_bbox=True),
     # model training and testing settings
     train_cfg=dict(
         pts=dict(
@@ -76,8 +91,7 @@ model = dict(
 
 dataset_type = 'NuScenesDataset'
 data_root = 'data/nuscenes/'
-file_client_args = dict(backend='disk')
-# file_client_args = dict(backend='nori')
+backend_args = None
 
 db_sampler = dict(
     data_root=data_root,
@@ -113,7 +127,8 @@ db_sampler = dict(
         coord_type='LIDAR',
         load_dim=5,
         use_dim=[0, 1, 2, 3, 4],
-        file_client_args=file_client_args))
+        backend_args=backend_args),
+    backend_args=backend_args)
 
 train_pipeline = [
     dict(
@@ -121,14 +136,14 @@ train_pipeline = [
         coord_type='LIDAR',
         load_dim=5,
         use_dim=5,
-        file_client_args=file_client_args),
+        backend_args=backend_args),
     dict(
         type='LoadPointsFromMultiSweeps',
         sweeps_num=9,
         use_dim=[0, 1, 2, 3, 4],
-        file_client_args=file_client_args,
         pad_empty_sweeps=True,
-        remove_close=True),
+        remove_close=True,
+        backend_args=backend_args),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
     dict(type='ObjectSample', db_sampler=db_sampler),
     dict(
@@ -145,8 +160,9 @@ train_pipeline = [
     dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='ObjectNameFilter', classes=class_names),
     dict(type='PointShuffle'),
-    dict(type='DefaultFormatBundle3D', class_names=class_names),
-    dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
+    dict(
+        type='Pack3DDetInputs',
+        keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
 ]
 test_pipeline = [
     dict(
@@ -154,14 +170,14 @@ test_pipeline = [
         coord_type='LIDAR',
         load_dim=5,
         use_dim=5,
-        file_client_args=file_client_args),
+        backend_args=backend_args),
     dict(
         type='LoadPointsFromMultiSweeps',
         sweeps_num=9,
         use_dim=[0, 1, 2, 3, 4],
-        file_client_args=file_client_args,
         pad_empty_sweeps=True,
-        remove_close=True),
+        remove_close=True,
+        backend_args=backend_args),
     dict(
         type='MultiScaleFlipAug3D',
         img_scale=(1333, 800),
@@ -173,55 +189,35 @@ test_pipeline = [
                 rot_range=[0, 0],
                 scale_ratio_range=[1., 1.],
                 translation_std=[0, 0, 0]),
-            dict(type='RandomFlip3D'),
-            dict(
-                type='DefaultFormatBundle3D',
-                class_names=class_names,
-                with_label=False),
-            dict(type='Collect3D', keys=['points'])
-        ])
-]
-# construct a pipeline for data and gt loading in show function
-# please keep its loading function consistent with test_pipeline (e.g. client)
-eval_pipeline = [
-    dict(
-        type='LoadPointsFromFile',
-        coord_type='LIDAR',
-        load_dim=5,
-        use_dim=5,
-        file_client_args=file_client_args),
-    dict(
-        type='LoadPointsFromMultiSweeps',
-        sweeps_num=9,
-        use_dim=[0, 1, 2, 3, 4],
-        file_client_args=file_client_args,
-        pad_empty_sweeps=True,
-        remove_close=True),
-    dict(
-        type='DefaultFormatBundle3D',
-        class_names=class_names,
-        with_label=False),
-    dict(type='Collect3D', keys=['points'])
+            dict(type='RandomFlip3D')
+        ]),
+    dict(type='Pack3DDetInputs', keys=['points'])
 ]
 
-optimizer = dict(type='AdamW', lr=10e-4, weight_decay=0.01)
-data = dict(
-    samples_per_gpu=4,
-    workers_per_gpu=8,
-    train=dict(
+train_dataloader = dict(
+    _delete_=True,
+    batch_size=4,
+    num_workers=4,
+    persistent_workers=True,
+    sampler=dict(type='DefaultSampler', shuffle=True),
+    dataset=dict(
         type='CBGSDataset',
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
-            ann_file=data_root + 'nuscenes_infos_train.pkl',
+            ann_file='nuscenes_infos_train.pkl',
             pipeline=train_pipeline,
-            classes=class_names,
+            metainfo=dict(classes=class_names),
             test_mode=False,
+            data_prefix=data_prefix,
             use_valid_flag=True,
             # we use box_type_3d='LiDAR' in kitti and nuscenes dataset
             # and box_type_3d='Depth' in sunrgbd and scannet dataset.
-            box_type_3d='LiDAR')),
-    val=dict(pipeline=test_pipeline, classes=class_names),
-    test=dict(pipeline=test_pipeline, classes=class_names))
+            box_type_3d='LiDAR',
+            backend_args=backend_args)))
+test_dataloader = dict(
+    dataset=dict(pipeline=test_pipeline, metainfo=dict(classes=class_names)))
+val_dataloader = dict(
+    dataset=dict(pipeline=test_pipeline, metainfo=dict(classes=class_names)))
 
-evaluation = dict(interval=20, pipeline=eval_pipeline)
+train_cfg = dict(val_interval=20)

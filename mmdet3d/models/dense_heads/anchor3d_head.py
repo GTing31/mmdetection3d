@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 from typing import List, Tuple
-
+import time
 import numpy as np
 import torch
 from mmdet.models.utils import multi_apply
@@ -195,7 +195,12 @@ class Anchor3DHead(Base3DDenseHead, AnchorTrainMixin):
                     predictions for all scale levels, each is a 4D-tensor,
                     the channels number is num_base_priors * 2.
         """
-        return multi_apply(self.forward_single, x)
+        start_time = time.time()
+        outputs = multi_apply(self.forward_single, x)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        # print(f"Head 花費：{elapsed_time:.6f} 秒")
+        return outputs
 
     # TODO: Support augmentation test
     def aug_test(self,

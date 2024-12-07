@@ -3,6 +3,8 @@ import argparse
 import logging
 import os
 import os.path as osp
+import torch
+
 
 from mmengine.config import Config, DictAction
 from mmengine.logging import print_log
@@ -11,6 +13,29 @@ from mmengine.runner import Runner
 from mmdet3d.registry import MODELS
 from mmdet3d.utils import replace_ceph_backend
 
+from torchinfo import summary
+from thop import profile, clever_format
+from prettytable import PrettyTable
+from collections import defaultdict
+
+def count_parameters(model):
+    table = PrettyTable(["Modules", "Parameters"])
+    module_params = defaultdict(int)
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        params = parameter.numel()
+        # 提取模块名称，您可以根据需要调整这里的层级
+        module_name = name.split('.')[0]  # 获取顶级模块名
+        module_params[module_name] += params
+        total_params += params
+
+    for module_name, params in module_params.items():
+        table.add_row([module_name, params])
+    print(table)
+    print(f"Total Trainable Params: {total_params}")
+    return total_params
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a 3D detector')
@@ -136,8 +161,9 @@ def main():
         # build customized runner from the registry
         # if 'runner_type' is set in the cfg
         runner = RUNNERS.build(cfg)
-    print(runner.model)#print model
-    # print(MODELS.module_dict)
+    model = runner.model
+    count_parameters(model)
+
     # start training
     runner.train()
 

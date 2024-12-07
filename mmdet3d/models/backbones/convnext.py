@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from itertools import chain
 from typing import Optional, Sequence, Tuple
+import time
 
 import torch
 import torch.nn as nn
@@ -66,21 +67,32 @@ class ConvNeXtPC(BaseModule):
     """适用于点云的 ConvNeXt 主干网络。"""
 
     arch_settings = {
+        'lite': {
+            'depths': [2, 2, 1, 1],
+            'channels': [48, 96, 192, 192],
+            'out_indices': [3]
+
+        },
+
         'tiny': {
             'depths': [2, 2, 1, 1, 1],
-            'channels': [48, 96, 192, 192, 192]
+            'channels': [48, 96, 96, 96, 96],
+            'out_indices': [2, 3, 4]
         },
         'small': {
             'depths': [3, 3, 2, 1, 1],
-            'channels': [48, 96, 192, 192, 192]
+            'channels': [48, 96, 192, 192, 192],
+            'out_indices': [2, 3, 4]
         },
         'base': {
             'depths': [4, 4, 2, 2, 1],
-            'channels': [64, 192, 384, 384, 384]
+            'channels': [64, 192, 384, 384, 384],
+            'out_indices': [2, 3, 4]
         },
         'large': {
             'depths': [6, 6, 4, 2, 1],
-            'channels': [96, 192, 384, 384, 384]
+            'channels': [96, 192, 384, 384, 384],
+            'out_indices': [2, 3, 4]
         },
     }
 
@@ -117,6 +129,8 @@ class ConvNeXtPC(BaseModule):
 
         self.depths = arch['depths']
         self.channels = arch['channels']
+        out_indices = arch['out_indices']
+
         assert (isinstance(self.depths, Sequence)
                 and isinstance(self.channels, Sequence)
                 and len(self.depths) == len(self.channels)), \
@@ -205,15 +219,19 @@ class ConvNeXtPC(BaseModule):
 
 
     def forward(self, x):
+
+        start_time = time.time()
         # x.shape [4, 96, 1024, 1024]
         # print(f"Input shape: {x.shape}")
         outs = []
+        print("out_indices", self.out_indices)
         for i, stage in enumerate(self.stages):
             if i >= self.first_downsample:
                 x = self.downsample_layers[i](x)  # NOTE, pretrain_weight
                 # print(f"After downsampling layer {i}, shape: {x.shape}")
             # print(stage)
             x = stage(x)
+
 
             # print(f"After stage {i}, shape: {x.shape}")
             if i in self.out_indices:
@@ -227,7 +245,9 @@ class ConvNeXtPC(BaseModule):
                     outs.append(norm_layer(x).contiguous())
                 print(f"Output at layer {i} shape: {outs[-1].shape}")
 
-
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        # print(f"Backbone 花費：{elapsed_time:.6f} 秒")
         # print(outs[0].shape)
         return tuple(outs)
 
