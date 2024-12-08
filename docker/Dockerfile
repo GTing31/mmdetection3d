@@ -21,6 +21,7 @@ RUN pip install mmsegmentation==0.18.0
 RUN conda clean --all
 RUN git clone https://github.com/open-mmlab/mmdetection3d.git /mmdetection3d
 WORKDIR /mmdetection3d
+RUN git checkout tags/v0.18.1 -b v0.18.1
 ENV FORCE_CUDA="1"
 RUN pip install -r requirements/build.txt
 RUN pip install --no-cache-dir -e .

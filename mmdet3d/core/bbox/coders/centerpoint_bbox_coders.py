@@ -121,6 +121,7 @@ class CenterPointBBoxCoder(BaseBBoxCoder):
                dim,
                vel,
                reg=None,
+               iou_scores=None,
                task_id=-1):
         """Decode bboxes.
 
@@ -133,7 +134,7 @@ class CenterPointBBoxCoder(BaseBBoxCoder):
             hei (torch.Tensor): Height of the boxes with the shape
                 of [B, 1, W, H].
             dim (torch.Tensor): Dim of the boxes with the shape of
-                [B, 1, W, H].
+                [B, 3, W, H].
             vel (torch.Tensor): Velocity with the shape of [B, 1, W, H].
             reg (torch.Tensor): Regression value of the boxes in 2D with
                 the shape of [B, 2, W, H]. Default: None.
@@ -175,6 +176,12 @@ class CenterPointBBoxCoder(BaseBBoxCoder):
         clses = clses.view(batch, self.max_num).float()
         scores = scores.view(batch, self.max_num)
 
+        # IoU score
+        if iou_scores is not None:
+            iou_scores = self._transpose_and_gather_feat(iou_scores, inds)
+            iou_scores = iou_scores.view(batch, self.max_num)
+            final_iou_scores = iou_scores
+
         xs = xs.view(
             batch, self.max_num,
             1) * self.out_size_factor * self.voxel_size[0] + self.pc_range[0]
@@ -213,11 +220,20 @@ class CenterPointBBoxCoder(BaseBBoxCoder):
                 boxes3d = final_box_preds[i, cmask]
                 scores = final_scores[i, cmask]
                 labels = final_preds[i, cmask]
-                predictions_dict = {
-                    'bboxes': boxes3d,
-                    'scores': scores,
-                    'labels': labels
-                }
+                if iou_scores is not None:
+                    iou_scores = final_iou_scores[i, cmask]
+                    predictions_dict = {
+                        'bboxes': boxes3d,
+                        'scores': scores,
+                        'labels': labels,
+                        'iou_scores': iou_scores
+                    }
+                else:
+                    predictions_dict = {
+                        'bboxes': boxes3d,
+                        'scores': scores,
+                        'labels': labels
+                    }
 
                 predictions_dicts.append(predictions_dict)
         else:
