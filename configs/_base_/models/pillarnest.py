@@ -31,9 +31,9 @@ model = dict(
     backbone=dict(
         type="InceptionNext",
         in_channels=48,
-        depth=(2, 2, 1, 1, 1),
-        channels=(48, 96, 96, 96, 96),
-        drop_path_rate=0.4,
+        arch="lite",
+        first_downsample=True,
+        drop_path_rate=0.,
         layer_scale_init_value=1.0,
         gap_before_final_norm=False,
     ),
@@ -44,7 +44,7 @@ model = dict(
 
     neck=dict(
         type='SECONDFPN',
-        in_channels=[96, 96, 96],
+        in_channels=[48, 96, 192],
         upsample_strides=[1, 2, 4],
         out_channels=[96, 96, 96],
         use_conv_for_no_stride=True, ),
