@@ -142,15 +142,32 @@ class MetaNeXtStage(nn.Module):
 
 @MODELS.register_module()
 class InceptionNext(BaseModule):
+
+    arch_settings = {
+        'lite': {
+            'depths': [5, 5, 3],
+            'channels': [48, 96, 192],
+            'out_indices': [0, 1, 2]
+        },
+        'tiny': {
+            'depths': [2, 2, 1, 1, 1],
+            'channels': [48, 96, 96, 96, 96],
+            'out_indices': [2, 3, 4]
+        },
+        'small': {
+            'depths': [3, 3, 2, 1, 1],
+            'channels': [48, 96, 192, 192, 192],
+            'out_indices': [2, 3, 4]
+        },
+    }
     def __init__(self,
-                 in_channels,
-                 depth=(2, 2, 1, 1, 1),
-                 channels=(48, 96, 96, 96, 96),
-                 out_indices=(2, 3, 4),
+                 arch='tiny',
+                 in_channels=3,
+                 first_downsample=True,
                  token_mixers=InceptionDWConv2d,
                  norm_layer=nn.BatchNorm2d,
                  act_layer=nn.GELU,
-                 mlp_ratios=(4, 4, 4, 4, 3),
+                 mlp_ratios=4,
                  drop_rate=0.,
                  drop_path_rate=(0., 0., 0., 0., 0.),
                  init_values=1e-6,
@@ -158,29 +175,48 @@ class InceptionNext(BaseModule):
                  ):
         super().__init__()
 
-        num_stage = len(depth)
+        if isinstance(arch, str):
+            assert arch in self.arch_settings, \
+                f'Unavailable arch, please choose from ' \
+                f'({set(self.arch_settings)}) or pass a dict.'
+            arch = self.arch_settings[arch]
+        elif isinstance(arch, dict):
+            assert 'depths' in arch and 'channels' in arch, \
+                f'The arch dict must have "depths" and "channels", ' \
+                f'but got {list(arch.keys())}.'
+
+        self.depths = arch['depths']
+        self.channels = arch['channels']
+        self.out_indices = arch['out_indices']
+        self.first_downsample = first_downsample
+
+        num_stage = len(self.depths)
         if not isinstance(token_mixers, (list, tuple)):
             token_mixers = [token_mixers] * num_stage
         if not isinstance(mlp_ratios, (list, tuple)):
             mlp_ratios = [mlp_ratios] * num_stage
 
         self.drop_rate = drop_rate
-        self.out_indices = out_indices
+
 
         self.stages = nn.Sequential()
 
-        dp_rates = [x.tolist() for x in torch.linspace(0, drop_path_rate, sum(depth)).split(depth)]
+        dp_rates = [x.tolist() for x in torch.linspace(0, drop_path_rate, sum(self.depths)).split(self.depths)]
         # print(f"dp_rates: {dp_rates}")
         stage = []
         prev_chs = in_channels
         for i in range(num_stage):
-            out_chs = channels[i]
+            if self.first_downsample:
+                ds_stride = 2
+            else:
+                ds_stride = 2 if i > 0 else 1
+            out_chs = self.channels[i]
             stage.append(
                 MetaNeXtStage(
                     in_chs=prev_chs,
                     out_chs=out_chs,
-                    ds_stride=2 if i > 0 else 1,
-                    depth=depth[i],
+                    ds_stride=ds_stride,
+                    depth=self.depths[i],
                     drop_path_rates=dp_rates[i],
                     ls_init_value=init_values,
                     token_mixer=token_mixers[i],
@@ -195,7 +231,7 @@ class InceptionNext(BaseModule):
 
     def forward(self, x):
         outs = []
-        # print(f"out_indices: {self.out_indices}")
+        print(f"out_indices: {self.out_indices}")
         # print(f"input shape: {x.shape}")
         # print(self.stages)
 
