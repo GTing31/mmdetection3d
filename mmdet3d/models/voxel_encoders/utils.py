@@ -156,7 +156,14 @@ class PFNLayer(nn.Module):
 
         Returns:
             torch.Tensor: Features of Pillars.
+
+
         """
+        # print(f"Input shape: {inputs.shape}")
+        # print(f"Weight shape: {self.linear.weight.shape}")
+        # print(f"Bias shape: {self.linear.bias.shape}")
+        # print(f"Input values: {inputs}")
+
         x = self.linear(inputs)  # [N, 20, 10] --> [N, 20, 64]
         x = self.norm(x.permute(0, 2, 1).contiguous()).permute(0, 2,
                                                                1).contiguous()  # --> [N, 20, 64]

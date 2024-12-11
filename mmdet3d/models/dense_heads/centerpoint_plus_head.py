@@ -336,3 +336,5 @@ class CenterPlusHead(CenterHead):
                     labels = torch.cat([ret[i][k].int() for ret in rets])
             ret_list.append([bboxes, scores, labels])
         return ret_list
+
+

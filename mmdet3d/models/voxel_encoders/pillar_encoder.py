@@ -54,7 +54,7 @@ class PillarFeatureNet(nn.Module):
         if with_cluster_center:
             in_channels += 3
         if with_voxel_center:
-            in_channels += 2
+            in_channels += 3
         if with_distance:
             in_channels += 1
         self._with_distance = with_distance
@@ -84,8 +84,10 @@ class PillarFeatureNet(nn.Module):
         # Need pillar (voxel) size and x/y offset in order to calculate offset
         self.vx = voxel_size[0]
         self.vy = voxel_size[1]
+        self.vz = voxel_size[2]
         self.x_offset = self.vx / 2 + point_cloud_range[0]
         self.y_offset = self.vy / 2 + point_cloud_range[1]
+        self.z_offset = self.vz / 2 + point_cloud_range[2]
         self.point_cloud_range = point_cloud_range
 
     @force_fp32(out_fp16=True)
@@ -106,29 +108,35 @@ class PillarFeatureNet(nn.Module):
         if self._with_cluster_center:
             points_mean = features[:, :, :3].sum(
                 dim=1, keepdim=True) / num_points.type_as(features).view(
-                    -1, 1, 1)  # --> [7132, 1, 3]
+                    -1, 1, 1)
             f_cluster = features[:, :, :3] - points_mean
             features_ls.append(f_cluster)
 
         # Find distance of x, y, and z from pillar center
         dtype = features.dtype
         if self._with_voxel_center:
-            if not self.legacy:  # ccp: False
-                f_center = torch.zeros_like(features[:, :, :2])
+            if not self.legacy:
+                f_center = torch.zeros_like(features[:, :, :3])
                 f_center[:, :, 0] = features[:, :, 0] - (
                     coors[:, 3].to(dtype).unsqueeze(1) * self.vx +
                     self.x_offset)
                 f_center[:, :, 1] = features[:, :, 1] - (
                     coors[:, 2].to(dtype).unsqueeze(1) * self.vy +
                     self.y_offset)
+                f_center[:, :, 2] = features[:, :, 2] - (
+                    coors[:, 1].to(dtype).unsqueeze(1) * self.vz +
+                    self.z_offset)
             else:
-                f_center = features[:, :, :2]
+                f_center = features[:, :, :3]
                 f_center[:, :, 0] = f_center[:, :, 0] - (
                     coors[:, 3].type_as(features).unsqueeze(1) * self.vx +
                     self.x_offset)
                 f_center[:, :, 1] = f_center[:, :, 1] - (
                     coors[:, 2].type_as(features).unsqueeze(1) * self.vy +
                     self.y_offset)
+                f_center[:, :, 2] = f_center[:, :, 2] - (
+                    coors[:, 1].type_as(features).unsqueeze(1) * self.vz +
+                    self.z_offset)
             features_ls.append(f_center)
 
         if self._with_distance:
@@ -140,11 +148,12 @@ class PillarFeatureNet(nn.Module):
         # The feature decorations were calculated without regard to whether
         # pillar was empty. Need to ensure that
         # empty pillars remain set to zeros.
-        voxel_count = features.shape[1]  # 20
+        voxel_count = features.shape[1]
         mask = get_paddings_indicator(num_points, voxel_count, axis=0)
-        mask = torch.unsqueeze(mask, -1).type_as(features)  # [7132, 20, 1]
+        mask = torch.unsqueeze(mask, -1).type_as(features)
         features *= mask
 
+        # print(f"features shape: {features.shape}")
         for pfn in self.pfn_layers:
             features = pfn(features, num_points)
 
@@ -392,7 +401,9 @@ class HeightPillarFeatureNet(PillarFeatureNet):
             in_channels += 3
         if with_distance:
             in_channels += 1
-        feat_channels = [in_channels] + list(feat_channels)
+
+        self.in_channels = in_channels
+        feat_channels = [self.in_channels] + list(feat_channels)
 
         if encoder_layer == "PFNLayer":
             self.encoder_layer = PFNLayer
@@ -435,6 +446,8 @@ class HeightPillarFeatureNet(PillarFeatureNet):
         Returns:
             torch.Tensor: Features of pillars.
         """
+        print("features shape: ", features.shape)
+        print('in_channels: ', self.in_channels)
 
         features_ls = [features]
         if self._with_cluster_center:
@@ -480,7 +493,7 @@ class HeightPillarFeatureNet(PillarFeatureNet):
         mask = get_paddings_indicator(num_points, voxel_count, axis=0)
         mask = torch.unsqueeze(mask, -1).type_as(features)
         features *= mask
-
+        # print(features.shape)
         for pfn in self.pfn_layers:
             features = pfn(features, num_points)
 

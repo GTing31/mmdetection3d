@@ -6,8 +6,9 @@ from .pointnet2_sa_msg import PointNet2SAMSG
 from .pointnet2_sa_ssg import PointNet2SASSG
 from .second import SECOND
 from .convnext_pc import ConvNeXt_PC
+from .InceptionNext import InceptionNext
 
 __all__ = [
     'ResNet', 'ResNetV1d', 'ResNeXt', 'SSDVGG', 'HRNet', 'NoStemRegNet',
-    'SECOND', 'PointNet2SASSG', 'PointNet2SAMSG', 'MultiBackbone'
+    'SECOND', 'PointNet2SASSG', 'PointNet2SAMSG', 'MultiBackbone', 'InceptionNext'
 ]

@@ -74,6 +74,8 @@ def main():
     if hasattr(model, 'forward_dummy'):
         model.forward = model.forward_dummy
     else:
+        # model.forward = model.forward
+        # print(f'Warning: Using forward method for FLOPs calculation in {model.__class__.__name__}.')
         raise NotImplementedError(
             'FLOPs counter is currently not supported for {}'.format(
                 model.__class__.__name__))
