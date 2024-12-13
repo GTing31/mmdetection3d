@@ -108,15 +108,15 @@ class PillarFeatureNet(nn.Module):
         if self._with_cluster_center:
             points_mean = features[:, :, :3].sum(
                 dim=1, keepdim=True) / num_points.type_as(features).view(
-                    -1, 1, 1)
+                    -1, 1, 1)  # --> [7132, 1, 3]
             f_cluster = features[:, :, :3] - points_mean
             features_ls.append(f_cluster)
 
         # Find distance of x, y, and z from pillar center
         dtype = features.dtype
         if self._with_voxel_center:
-            if not self.legacy:
-                f_center = torch.zeros_like(features[:, :, :3])
+            if not self.legacy:  # ccp: False
+                f_center = torch.zeros_like(features[:, :, :2])
                 f_center[:, :, 0] = features[:, :, 0] - (
                     coors[:, 3].to(dtype).unsqueeze(1) * self.vx +
                     self.x_offset)
@@ -148,9 +148,9 @@ class PillarFeatureNet(nn.Module):
         # The feature decorations were calculated without regard to whether
         # pillar was empty. Need to ensure that
         # empty pillars remain set to zeros.
-        voxel_count = features.shape[1]
+        voxel_count = features.shape[1]  # 20
         mask = get_paddings_indicator(num_points, voxel_count, axis=0)
-        mask = torch.unsqueeze(mask, -1).type_as(features)
+        mask = torch.unsqueeze(mask, -1).type_as(features)  # [7132, 20, 1]
         features *= mask
 
         # print(f"features shape: {features.shape}")
@@ -398,12 +398,10 @@ class HeightPillarFeatureNet(PillarFeatureNet):
         if with_cluster_center:
             in_channels += 3
         if with_voxel_center:
-            in_channels += 3
+            in_channels += 2
         if with_distance:
             in_channels += 1
-
-        self.in_channels = in_channels
-        feat_channels = [self.in_channels] + list(feat_channels)
+        feat_channels = [in_channels] + list(feat_channels)
 
         if encoder_layer == "PFNLayer":
             self.encoder_layer = PFNLayer
@@ -445,6 +443,8 @@ class HeightPillarFeatureNet(PillarFeatureNet):
 
         Returns:
             torch.Tensor: Features of pillars.
+
+
         """
         print("features shape: ", features.shape)
         print('in_channels: ', self.in_channels)
@@ -485,6 +485,10 @@ class HeightPillarFeatureNet(PillarFeatureNet):
             features_ls.append(points_dist)
 
         # Combine together feature decorations
+
+        for i, feat in enumerate(features_ls):
+            print(f"Feature {i} shape: {feat.shape}")
+
         features = torch.cat(features_ls, dim=-1)
         # The feature decorations were calculated without regard to whether
         # pillar was empty. Need to ensure that
@@ -493,7 +497,12 @@ class HeightPillarFeatureNet(PillarFeatureNet):
         mask = get_paddings_indicator(num_points, voxel_count, axis=0)
         mask = torch.unsqueeze(mask, -1).type_as(features)
         features *= mask
-        # print(features.shape)
+        print("Legacy: ", self.legacy)
+        print("Mask shape: ", mask.shape)
+        print("Features before masking: ", features.shape)
+        print("Features after masking: ", features.shape)
+
+        print(features.shape)
         for pfn in self.pfn_layers:
             features = pfn(features, num_points)
 

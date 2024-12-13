@@ -45,20 +45,25 @@ model = dict(
     #     ),
     # ),
     neck=dict(
-        type='SECONDFPN',
-        in_channels=[96, 96, 96],
-        out_channels=[96, 96, 96],
-        upsample_strides=[1, 2, 4],
-        norm_cfg=dict(type='BN', eps=1e-3, momentum=0.01),
-        upsample_cfg=dict(type='deconv', bias=False),
-        use_conv_for_no_stride=True),
+        type='BiFPN',
+    ),
+
+    # neck=dict(
+    #     type='SECONDFPN',
+    #     in_channels=[96, 96, 96],
+    #     out_channels=[96, 96, 96],
+    #     upsample_strides=[1, 2, 4],
+    #     norm_cfg=dict(type='BN', eps=1e-3, momentum=0.01),
+    #     upsample_cfg=dict(type='deconv', bias=False),
+    #     use_conv_for_no_stride=True),
 
     bbox_head=dict(
         type='Anchor3DHead',
         num_classes=3,
-        in_channels=288,
-        feat_channels=288,
+        in_channels=96,
+        feat_channels=96,
         use_direction_classifier=True,
+        assigner_per_size=True,
         anchor_generator=dict(
             type='Anchor3DRangeGenerator',
             ranges=[
@@ -67,7 +72,9 @@ model = dict(
                 [0, -39.68, -1.78, 70.4, 39.68, -1.78],
             ],
             sizes=[[0.6, 0.8, 1.73], [0.6, 1.76, 1.73], [1.6, 3.9, 1.56]],
+            scales=[1, 1, 1],
             rotations=[0, 1.57],
+            size_per_range=True,
             reshape_out=False),
         diff_rad_by_sin=True,
         bbox_coder=dict(type='DeltaXYZWLHRBBoxCoder'),

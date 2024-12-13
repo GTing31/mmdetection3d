@@ -20,7 +20,7 @@ class_names = [
 model = dict(
     pts_voxel_layer=dict(voxel_size=voxel_size, point_cloud_range=point_cloud_range),
     pts_voxel_encoder=dict(
-        type='HeightPillarFeatureNet',
+        type='PillarFeatureNet',
         feat_channels=[48],
         voxel_size=voxel_size,
         point_cloud_range=point_cloud_range,
@@ -31,19 +31,31 @@ model = dict(
 
     pts_backbone=dict(
         _delete_=True,
-        type="ConvNeXt_PC",
-        arch="tiny",
+        type="InceptionNext",
         in_channels=48,
-        out_indices=[2, 3, 4],
-        drop_path_rate=0.4,
+        arch="tiny",
+        first_downsample=False,
+        drop_path_rate=0.,
         layer_scale_init_value=1.0,
         gap_before_final_norm=False,
-        init_cfg=dict(
-            type="Pretrained",
-            checkpoint="/data/pretrain_weight/convnext_tiny_mmcls.pth",
-            prefix="backbone.",
-        ),
     ),
+
+
+    # pts_backbone=dict(
+    #     _delete_=True,
+    #     type="ConvNeXt_PC",
+    #     arch="tiny",
+    #     in_channels=48,
+    #     out_indices=[2, 3, 4],
+    #     drop_path_rate=0.4,
+    #     layer_scale_init_value=1.0,
+    #     gap_before_final_norm=False,
+    #     init_cfg=dict(
+    #         type="Pretrained",
+    #         checkpoint="/data/pretrain_weight/convnext_tiny_mmcls.pth",
+    #         prefix="backbone.",
+    #     ),
+    # ),
     pts_neck=dict(
         type='SECONDFPN',
         in_channels=[96, 96, 96],

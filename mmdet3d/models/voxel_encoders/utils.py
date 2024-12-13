@@ -137,6 +137,7 @@ class PFNLayer(nn.Module):
 
         self.norm = build_norm_layer(norm_cfg, self.units)[1]
         self.linear = nn.Linear(in_channels, self.units, bias=False)
+        self.in_channels = in_channels
 
         assert mode in ['max', 'avg', 'maxavg']
         self.mode = mode
@@ -159,8 +160,8 @@ class PFNLayer(nn.Module):
 
 
         """
-        # print(f"Input shape: {inputs.shape}")
-        # print(f"Weight shape: {self.linear.weight.shape}")
+        print(f"Input shape: {inputs.shape}")
+        print(f"in_channels: {self.in_channels}")
         # print(f"Bias shape: {self.linear.bias.shape}")
         # print(f"Input values: {inputs}")
 

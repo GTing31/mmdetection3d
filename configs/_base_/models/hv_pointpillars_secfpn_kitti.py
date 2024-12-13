@@ -17,6 +17,16 @@ model = dict(
         point_cloud_range=[0, -39.68, -3, 69.12, 39.68, 1]),
     middle_encoder=dict(
         type='PointPillarsScatter', in_channels=64, output_shape=[496, 432]),
+
+    # backbone=dict(
+    #     type="InceptionNext",
+    #     in_channels=64,
+    #     arch="lite",
+    #     first_downsample=True,
+    #     drop_path_rate=0.,
+    #     layer_scale_init_value=1.0,
+    #     gap_before_final_norm=False,
+    # ),
     backbone=dict(
         type='SECOND',
         in_channels=64,

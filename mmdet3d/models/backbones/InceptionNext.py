@@ -145,8 +145,8 @@ class InceptionNext(BaseModule):
 
     arch_settings = {
         'lite': {
-            'depths': [5, 5, 3],
-            'channels': [48, 96, 192],
+            'depths': [3, 5, 5],
+            'channels': [64, 128, 256],
             'out_indices': [0, 1, 2]
         },
         'tiny': {
@@ -239,6 +239,6 @@ class InceptionNext(BaseModule):
             x = stage(x)
             if i in self.out_indices:
                 outs.append(x)
-                # print(f"stage {i} shape: {x.shape}")
+                print(f"stage {i} shape: {x.shape}")
 
         return tuple(outs)
