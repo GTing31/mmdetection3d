@@ -129,7 +129,23 @@ class BiFPNBlock(nn.Module):
 
 
         return [p3_out, p4_out, p5_out]
+class AutoAdjustBiFPNOutput(nn.Module):
+    def __init__(self, align_layer=1):  # align_layer 定義基準層索引
+        super(AutoAdjustBiFPNOutput, self).__init__()
+        self.align_layer = align_layer  # 默認以 P4 為基準層（索引為 1）
 
+    def forward(self, features):
+        # 自動選擇基準層大小
+        target_size = features[self.align_layer].shape[2:]  # 獲取對齊層的高和寬
+
+        # 將其他層對齊到 target_size
+        adjusted_features = [
+            F.interpolate(f, size=target_size, mode='bilinear', align_corners=False) for f in features
+        ]
+
+        # 拼接特徵
+        fused_features = torch.cat(adjusted_features, dim=1)
+        return fused_features
 
 @NECKS.register_module()
 class BiFPN(BaseModule):
@@ -142,8 +158,8 @@ class BiFPN(BaseModule):
     """
 
     def __init__(self,
-                 in_channels=[96, 96, 96],  # 根據你的Backbone輸出調整
-                 out_channels=96,
+                 in_channels=[64, 128, 256],  # 根據你的Backbone輸出調整
+                 out_channels=128,
                  num_outs=5,
                  num_layers=2,
                  norm_cfg=dict(type='BN', eps=1e-3, momentum=0.01),
@@ -177,9 +193,9 @@ class BiFPN(BaseModule):
         P3 = self.p3_conv(C3)
         P4 = self.p4_conv(C4)
         P5 = self.p5_conv(C5)
-        print(f"P3:{P3.shape}")
-        print(f"P4:{P4.shape}")
-        print(f"P5:{P5.shape}")
+        # print(f"P3:{P3.shape}")
+        # print(f"P4:{P4.shape}")
+        # print(f"P5:{P5.shape}")
 
         features = [P3, P4, P5]
 
@@ -187,7 +203,12 @@ class BiFPN(BaseModule):
         for bifpn in self.bifpn_blocks:
             features = bifpn(features)
 
+        auto_adjust = AutoAdjustBiFPNOutput(align_layer=1)  # 使用 P4 的分辨率為基準
+        fused_features = auto_adjust(features)
+
 
         # features: [P3_out, P4_out, P5_out, P6_out, P7_out]
-        print(f"BiFPN output shapes: {[f.shape for f in features]}")
-        return features
+        # print(f"BiFPN output shapes after adjustment: {fused_features.shape}")
+        # out = features[1]
+        # print(f"BiFPN output shapes after adjustment: {out.shape}")
+        return [fused_features]
